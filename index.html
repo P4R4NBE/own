@@ -65,7 +65,7 @@
                     <input type="text" id="ai-input" placeholder="관심 키워드나 실험 주제를 입력하세요..." 
                            class="w-full bg-gray-50 border border-gray-200 rounded-full pl-5 pr-12 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                     <button id="send-btn" class="absolute right-2 top-1.5 bg-blue-600 text-white p-2 rounded-full hover:bg-blue-700 transition">
-                        <svg xmlns="http://www.w3.org/2000/xl" class="h-4 w-4 transform rotate-45 -translate-x-0.5 translate-y-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 transform rotate-45 -translate-x-0.5 translate-y-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                         </svg>
                     </button>
@@ -77,32 +77,165 @@
 
     </div>
 
-    <div id="school-modal" class="fixed inset-0 bg-black bg-opacity-40 hidden flex items-center justify-center p-4 z-50"></div>
-    <div id="mock-modal" class="fixed inset-0 bg-black bg-opacity-40 hidden flex items-center justify-center p-4 z-50"></div>
+    <div id="school-modal" class="fixed inset-0 bg-black bg-opacity-40 hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
+            <h3 class="text-lg font-bold mb-4">내신 성적 입력</h3>
+            <form id="school-form" class="space-y-3 text-sm">
+                <div><label class="block font-medium mb-1">과목명</label><input type="text" id="s-name" placeholder="예: 화학Ⅱ" class="w-full border p-2 rounded-xl" required></div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div><label class="block font-medium mb-1">원점수</label><input type="number" id="s-score" class="w-full border p-2 rounded-xl" required></div>
+                    <div><label class="block font-medium mb-1">수강자수</label><input type="number" id="s-total" class="w-full border p-2 rounded-xl" required></div>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div><label class="block font-medium mb-1">석차</label><input type="number" id="s-rank" class="w-full border p-2 rounded-xl" required></div>
+                    <div><label class="block font-medium mb-1">동석차수</label><input type="number" id="s-same" value="1" class="w-full border p-2 rounded-xl" required></div>
+                </div>
+                <div><label class="block font-medium mb-1">표준편차</label><input type="number" step="0.1" id="s-dev" class="w-full border p-2 rounded-xl" required></div>
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" onclick="closeModal('school-modal')" class="px-4 py-2 border rounded-xl">취소</button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-xl">저장 및 계산</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="mock-modal" class="fixed inset-0 bg-black bg-opacity-40 hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
+            <h3 class="text-lg font-bold mb-4">모의고사 성적 입력</h3>
+            <form id="mock-form" class="space-y-3 text-sm">
+                <div class="grid grid-cols-2 gap-2">
+                    <div><label class="block font-medium mb-1">시행 연도</label><input type="number" id="m-year" value="2026" class="w-full border p-2 rounded-xl" required></div>
+                    <div><label class="block font-medium mb-1">시행 월</label><input type="number" id="m-month" placeholder="예: 3" class="w-full border p-2 rounded-xl" required></div>
+                </div>
+                <div><label class="block font-medium mb-1">과목명</label><input type="text" id="m-name" placeholder="예: 국어" class="w-full border p-2 rounded-xl" required></div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div><label class="block font-medium mb-1">원점수</label><input type="number" id="m-score" class="w-full border p-2 rounded-xl" required></div>
+                    <div><label class="block font-medium mb-1">표준점수</label><input type="number" id="m-std" class="w-full border p-2 rounded-xl" required></div>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div><label class="block font-medium mb-1">등급</label><input type="number" id="m-grade" class="w-full border p-2 rounded-xl" required></div>
+                    <div><label class="block font-medium mb-1">백분위</label><input type="number" id="m-percent" class="w-full border p-2 rounded-xl" required></div>
+                </div>
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" onclick="closeModal('mock-modal')" class="px-4 py-2 border rounded-xl">취소</button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-xl">저장</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <script>
+        // 모달 제어 전역 함수
         function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
         function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
 
-        // 전역 변수로 CSV 데이터 스트링 관리
+        // 생기부 CSV 데이터를 저장할 전역 변수
         let studentRecordContext = "";
 
         document.addEventListener('DOMContentLoaded', function() {
-            // [기존] 1. 달력 설정 및 2~4번 성적 로직은 기존 코드 그대로 유지됨...
+            // 1. 달력 초기화
             const calendarEl = document.getElementById('calendar');
-            const calendar = new FullCalendar.Calendar(calendarEl, { initialView: 'dayGridMonth', locale: 'ko' });
+            const calendar = new FullCalendar.Calendar(calendarEl, {
+                initialView: 'dayGridMonth',
+                locale: 'ko',
+                headerToolbar: { left: 'title', right: 'today prev,next' },
+                events: [
+                    { title: '⭐ 화학 보고서', start: '2026-06-10' },
+                    { title: '⭐ 생명 수행', start: '2026-06-24' }
+                ],
+                dateClick: function(info) {
+                    alert('클릭한 날짜: ' + info.dateStr);
+                }
+            });
             calendar.render();
 
-            // API Key 로컬 스토리지 연동 (기존에 저장한 키가 있다면 자동 로드)
+            // 2. 대시보드 성적 요약 동적 갱신
+            function updateSummary() {
+                const schoolData = JSON.parse(localStorage.getItem('schoolGrades') || '[]');
+                const mockData = JSON.parse(localStorage.getItem('mockGrades') || '[]');
+                
+                let html = '';
+                if(schoolData.length > 0) {
+                    const lastS = schoolData[schoolData.length - 1];
+                    html += `<p class="text-blue-600">🏠 내신 최신: ${lastS.name} [${lastS.calculatedGrade}등급] (원점수:${lastS.score})</p>`;
+                }
+                if(mockData.length > 0) {
+                    const lastM = mockData[mockData.length - 1];
+                    html += `<p class="text-purple-600">📝 모평 최신: ${lastM.year}년 ${lastM.month}월 ${lastM.name} [${lastM.grade}등급] (표점:${lastM.std})</p>`;
+                }
+                
+                if(html) {
+                    document.getElementById('summary-content').innerHTML = html;
+                }
+            }
+            updateSummary();
+
+            // 3. 내신 성적 저장 및 등급 자동 산출
+            document.getElementById('school-form').addEventListener('submit', function(e) {
+                e.preventDefault();
+                const name = document.getElementById('s-name').value;
+                const score = parseFloat(document.getElementById('s-score').value);
+                const total = parseInt(document.getElementById('s-total').value);
+                const rank = parseInt(document.getElementById('s-rank').value);
+                const same = parseInt(document.getElementById('s-same').value);
+                const dev = parseFloat(document.getElementById('s-dev').value);
+
+                const midRank = rank + (same - 1) / 2; // 중간석차 계산
+                const percentage = (midRank / total) * 100; // 백분율
+
+                let calculatedGrade = 9;
+                if (percentage <= 4) calculatedGrade = 1;
+                else if (percentage <= 11) calculatedGrade = 2;
+                else if (percentage <= 23) calculatedGrade = 3;
+                else if (percentage <= 40) calculatedGrade = 4;
+                else if (percentage <= 60) calculatedGrade = 5;
+                else if (percentage <= 77) calculatedGrade = 6;
+                else if (percentage <= 89) calculatedGrade = 7;
+                else if (percentage <= 96) calculatedGrade = 8;
+
+                const newGrade = { name, score, total, rank, same, dev, midRank, percentage, calculatedGrade };
+                const currentData = JSON.parse(localStorage.getItem('schoolGrades') || '[]');
+                currentData.push(newGrade);
+                localStorage.setItem('schoolGrades', JSON.stringify(currentData));
+
+                alert(`${name} 입력 완료! (${calculatedGrade}등급)`);
+                closeModal('school-modal');
+                this.reset();
+                updateSummary();
+            });
+
+            // 4. 모의고사 성적 저장
+            document.getElementById('mock-form').addEventListener('submit', function(e) {
+                e.preventDefault();
+                const year = document.getElementById('m-year').value;
+                const month = document.getElementById('m-month').value;
+                const name = document.getElementById('m-name').value;
+                const score = document.getElementById('m-score').value;
+                const std = document.getElementById('m-std').value;
+                const grade = document.getElementById('m-grade').value;
+                const percent = document.getElementById('m-percent').value;
+
+                const newMock = { year, month, name, score, std, grade, percent };
+                const currentData = JSON.parse(localStorage.getItem('mockGrades') || '[]');
+                currentData.push(newMock);
+                localStorage.setItem('mockGrades', JSON.stringify(currentData));
+
+                alert(`${year}년 ${month}월 ${name} 성적 저장 완료!`);
+                closeModal('mock-modal');
+                this.reset();
+                updateSummary();
+            });
+
+            // 5. API Key 스토리지 기억 및 로드
             const apiKeyInput = document.getElementById('api-key-input');
             if(localStorage.getItem('gemini_api_key')) {
                 apiKeyInput.value = localStorage.getItem('gemini_api_key');
             }
             apiKeyInput.addEventListener('input', (e) => {
-                localStorage.setItem('gemini_api_key', e.target.value);
+                localStorage.setItem('gemini_api_key', e.target.value.trim());
             });
 
-            // 5. CSV 파일 읽기 로직 (핵심 부품)
+            // 6. CSV 파일 파싱 및 로컬 로드
             const csvInput = document.getElementById('csv-file-input');
             const csvStatus = document.getElementById('csv-status');
 
@@ -112,15 +245,14 @@
 
                 const reader = new FileReader();
                 reader.onload = function(evt) {
-                    studentRecordContext = evt.target.result; // CSV 텍스트 전체 추출
-                    csvStatus.innerText = `✅ 파일 로드 성공: ${file.name} (${studentRecordContext.length} 자 참고 가능)`;
-                    csvStatus.classList.remove('text-gray-400');
-                    csvStatus.classList.add('text-green-600', 'font-medium');
+                    studentRecordContext = evt.target.result;
+                    csvStatus.innerText = `✅ 파일 로드 성공: ${file.name} (${studentRecordContext.length}자 대기중)`;
+                    csvStatus.className = "text-[10px] text-green-600 font-medium mt-1";
                 };
-                reader.readAsText(file, "UTF-8"); // 인코딩 깨짐 방지
+                reader.readAsText(file, "UTF-8");
             });
 
-            // 6. [업그레이드] 실시간 Gemini API 연동 호출부
+            // 7. Gemini API 안전 호출 및 응답 디버깅 엔진
             const sendBtn = document.getElementById('send-btn');
             sendBtn.addEventListener('click', async function() {
                 const apiKey = localStorage.getItem('gemini_api_key');
@@ -128,33 +260,34 @@
                 const userInput = document.getElementById('ai-input').value;
                 const responseBox = document.getElementById('ai-response');
                 
-                if(!apiKey) { alert('API Key를 먼저 입력해주세요.'); return; }
-                if(!subject || !userInput) { alert('과목을 선택하고 키워드를 입력해주세요.'); return; }
+                if(!apiKey) { alert('🔑 API Key를 먼저 입력해주세요.'); return; }
+                if(!subject || !userInput) { alert('과목과 검색 키워드를 입력해주세요.'); return; }
 
                 responseBox.classList.remove('hidden');
-                responseBox.innerText = `🤖 Gemini가 생기부 내역을 기반으로 고품질 탐구 보고서 주제를 설계하고 있습니다. 잠시만 기다려주세요...`;
+                responseBox.innerText = `🤖 시스템 빌드 중 및 백엔드 전송 중...`;
 
-                // 시스템 프롬프트 엔지니어링 (AI 페르소나 및 입력 규칙 강제)
-                const systemPrompt = `당신은 대한민국 고등학교 학생부종합전형 및 수시 평가 전문 입시 컨설턴트입니다. 
-다음 제공되는 [학생의 기존 생기부 기록 데이터]를 완벽하게 숙지하고, 이 학생의 기존 탐구 활동 흐름(연계성)과 학업 강점이 단절되지 않도록 유기적으로 이어지는 심화 탐구 주제를 추천해야 합니다.
+                // JSON 파싱 에러를 방지하기 위해 텍스트 이스케이프 정제 처리
+                const safeContext = studentRecordContext
+                    .replace(/\\/g, '\\\\')
+                    .replace(/"/g, '\\"')
+                    .replace(/\n/g, '\\n')
+                    .replace(/\r/g, '\\r');
 
-[학생의 기존 생기부 기록 데이터 (CSV format)]
-${studentRecordContext || "제공된 누적 데이터 없음. 기본 고교 교육과정 기반 추천 수행."}
+                const systemPrompt = `당신은 대한민국 고등학교 학생부종합전형 수시 평가 전문 컨설턴트입니다.
+제공된 [학생부 기록 데이터]를 기반으로 기존 탐구 흐름과 심화 연계가 가능한 탐구 보고서 주제 3가지를 제안해 주세요.
+
+[학생부 기록 데이터 (CSV)]
+${safeContext || "누적된 데이터 없음. 기본 고교 교육과정 기준 수행."}
 
 [요청 사항]
-- 선택 과목: ${subject}
-- 학생의 관심 키워드 및 요구사항: ${userInput}
+- 과목: ${subject}
+- 학생의 관심 키워드: ${userInput}
 
-위 내용을 토대로, 학생의 기존 탐구(예: 카페인 독성 실험, 물질 구조 탐구 등 기존 내역이 있다면 적극 연계)에서 한 단계 더 나아간 구체적인 '수행평가/탐구보고서 주제' 3가지를 제안해 주세요. 
-각 주제는 다음 양식을 지켜주세요:
-1. 주제명
-2. 탐구 동기 및 기존 생기부 활동과의 연계 포인트
-3. 핵심 탐구 내용 및 방법 (고교 실험실 수준 고려)
-4. 기대 효과 및 세특 기재 팁`;
+양식은 각 주제별로 1.주제명 2.연계 포인트 3.핵심 탐구 내용 4.세특 작성 팁을 나누어 구체적으로 작성해 주세요.`;
 
                 try {
-                    // Gemini 1.5 Flash 모델 API Endpoint 호출 (가장 빠르고 효율적)
-                    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+                    // 안정화 버전인 정식 v1 EndPoint 사용
+                    const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
                     
                     const response = await fetch(url, {
                         method: 'POST',
@@ -166,17 +299,24 @@ ${studentRecordContext || "제공된 누적 데이터 없음. 기본 고교 교�
 
                     const data = await response.json();
                     
-                    if (data.candidates && data.candidates[0].content.parts[0].text) {
+                    // Google API 측에서 에러 객체를 명시적으로 던진 경우의 예외 처리
+                    if (data.error) {
+                        responseBox.innerText = `❌ Google 서버 에러 반환:\n• 코드: ${data.error.code}\n• 사유: ${data.error.message}\n• 상태: ${data.error.status}\n\n💡 API Key가 올바른지, 혹은 결제/할당량 한도 이슈인지 확인해 주세요.`;
+                        return;
+                    }
+
+                    // 안전한 응답 트리 검증 및 화면 출력
+                    if (data.candidates && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0].text) {
                         let aiText = data.candidates[0].content.parts[0].text;
-                        // 결과 가독성을 위해 간단히 마크다운 기호 정제 가공
                         responseBox.innerText = aiText;
                     } else {
-                        responseBox.innerText = "❌ 에러: API 응답 구조가 올바르지 않습니다. Key 혹은 할당량을 확인하세요.";
+                        // 정상 응답이 아닐 경우 파싱된 원본 구조를 확인하기 위한 디버깅 코드
+                        responseBox.innerText = `❌ 에러: API 응답 트리 파싱 실패.\n반환된 데이터 구조: ${JSON.stringify(data).substring(0, 300)}...`;
                     }
 
                 } catch (error) {
                     console.error(error);
-                    responseBox.innerText = "❌ API 호출 중 오류가 발생했습니다. 콘솔 창을 확인하세요.";
+                    responseBox.innerText = `❌ 통신 오류: ${error.message}\n인터넷 연결 상태를 확인해 주세요.`;
                 }
             });
         });
