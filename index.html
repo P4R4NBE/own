@@ -8,6 +8,7 @@
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
     <style>
         .fc { max-height: 400px; font-size: 0.85rem; }
+        .fc-event { cursor: pointer; padding: 2px 4px; font-size: 0.75rem; border-radius: 6px; }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-800 font-sans">
@@ -21,9 +22,8 @@
           
             <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 h-48 overflow-y-auto">
                 <h3 class="text-sm font-bold text-gray-500 mb-3">과목 / 수행평가 내용 / 마감일</h3>
-                <div id="memo-list" class="space-y-2">
-                    <p class="text-sm text-gray-600">📌 [화학Ⅱ] 카페인 세포 독성 보고서 제출</p>
-                </div>
+                <div id="memo-list" class="space-y-2 text-sm text-gray-600">
+                    </div>
             </div>
         </div>
 
@@ -68,8 +68,6 @@
                     <option value="자율">자율</option>
                     <option value="진로">진로</option>
                     <option value="동아리">동아리</option>
-
-
                 </select>
 
                 <div class="w-full max-w-md relative">
@@ -86,6 +84,49 @@
             </div>
         </div>
 
+    </div>
+
+    <div id="event-modal" class="fixed inset-0 bg-black bg-opacity-40 hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
+            <h3 class="text-lg font-bold mb-4 text-blue-600">🗓️ 새 일정 추가</h3>
+            <form id="event-form" class="space-y-3 text-sm">
+                <div>
+                    <label class="block font-medium mb-1">분류</label>
+                    <select id="e-category" class="w-full border p-2 rounded-xl" required>
+                        <option value="학교">🏫 학교 (수행평가/대회 등)</option>
+                        <option value="개인">👤 개인 일정</option>
+                        <option value="생일">🎂 생일</option>
+                        <option value="기타">📌 기타</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block font-medium mb-1">과목 / 연관 분야</label>
+                    <input type="text" id="e-subject" placeholder="예: 화학Ⅱ, 공통, 동아리" class="w-full border p-2 rounded-xl" required>
+                </div>
+                <div>
+                    <label class="block font-medium mb-1">내용 (일정 제목)</label>
+                    <input type="text" id="e-title" placeholder="예: 카페인 세포독성 보고서 제출" class="w-full border p-2 rounded-xl" required>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block font-medium mb-1">시작일 (달력 표시)</label>
+                        <input type="date" id="e-start-date" class="w-full border p-2 rounded-xl" required>
+                    </div>
+                    <div>
+                        <label class="block font-medium mb-1">마감 기한</label>
+                        <input type="date" id="e-end-date" class="w-full border p-2 rounded-xl">
+                    </div>
+                </div>
+                <div>
+                    <label class="block font-medium mb-1">메모 / 상세 내용</label>
+                    <textarea id="e-memo" rows="2" placeholder="준비물, 진행 상황 등 자유롭게 입력" class="w-full border p-2 rounded-xl"></textarea>
+                </div>
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" onclick="closeModal('event-modal')" class="px-4 py-2 border rounded-xl">취소</button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-xl">일정 등록</button>
+                </div>
+            </form>
+        </div>
     </div>
 
     <div id="school-modal" class="fixed inset-0 bg-black bg-opacity-40 hidden flex items-center justify-center p-4 z-50">
@@ -136,31 +177,105 @@
     </div>
 
     <script>
-        // 모달 제어 전역 함수
         function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
         function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
 
-        // 생기부 CSV 데이터를 저장할 전역 변수
         let studentRecordContext = "";
+        let calendar;
 
         document.addEventListener('DOMContentLoaded', function() {
-            // 1. 달력 초기화
+            
+            // 1. 달력 설정 및 실시간 스토리지 연동
             const calendarEl = document.getElementById('calendar');
-            const calendar = new FullCalendar.Calendar(calendarEl, {
+            calendar = new FullCalendar.Calendar(calendarEl, {
                 initialView: 'dayGridMonth',
                 locale: 'ko',
                 headerToolbar: { left: 'title', right: 'today prev,next' },
-                events: [
-                    { title: '⭐ 화학 보고서', start: '2026-06-10' },
-                    { title: '⭐ 생명 수행', start: '2026-06-24' }
-                ],
+                events: function(info, successCallback, failureCallback) {
+                    const savedEvents = JSON.parse(localStorage.getItem('academicEvents') || '[]');
+                    const colorMap = { '학교': '#3B82F6', '개인': '#10B981', '생일': '#EF4444', '기타': '#6B7280' };
+                    
+                    const formatted = savedEvents.map(ev => ({
+                        title: `[${ev.category}] ${ev.title}`,
+                        start: ev.startDate,
+                        backgroundColor: colorMap[ev.category] || '#3B82F6',
+                        borderColor: colorMap[ev.category] || '#3B82F6',
+                        extendedProps: ev
+                    }));
+                    successCallback(formatted);
+                },
+                // 달력 날짜 칸 클릭 시 모달 오픈 및 날짜 자동 바인딩
                 dateClick: function(info) {
-                    alert('클릭한 날짜: ' + info.dateStr);
+                    document.getElementById('e-start-date').value = info.dateStr;
+                    document.getElementById('e-end-date').value = info.dateStr;
+                    openModal('event-modal');
+                },
+                eventClick: function(info) {
+                    const props = info.event.extendedProps;
+                    alert(`📌 [${props.category}] 상세 일정\n• 과목: ${props.subject}\n• 내용: ${props.title}\n• 마감일: ${props.endDate || '없음'}\n• 메모: ${props.memo || '없음'}`);
                 }
             });
             calendar.render();
 
-            // 2. 대시보드 성적 요약 동적 갱신
+            // 2. 하단 일정 리스트 뷰어 엔진 및 동기화
+            function refreshEventLayout() {
+                calendar.refetchEvents();
+                const savedEvents = JSON.parse(localStorage.getItem('academicEvents') || '[]');
+                const memoListEl = document.getElementById('memo-list');
+                
+                if(savedEvents.length === 0) {
+                    memoListEl.innerHTML = `<p class="text-gray-400 text-xs">📅 달력의 날짜를 클릭하여 수행평가 및 일정을 등록해 보세요.</p>`;
+                    return;
+                }
+
+                savedEvents.sort((a,b) => new Date(a.startDate) - new Date(b.startDate));
+
+                memoListEl.innerHTML = savedEvents.map((ev, index) => {
+                    const deadlineText = ev.endDate ? ` (마감: ${ev.endDate})` : '';
+                    const memoText = ev.memo ? `<span class="text-gray-400 block text-xs pl-5">• 메모: ${ev.memo}</span>` : '';
+                    return `
+                        <div class="border-b border-gray-100 pb-1 flex flex-col justify-between">
+                            <div class="flex justify-between items-start">
+                                <p class="font-medium text-gray-700">📌 [${ev.category}/${ev.subject}] ${ev.title}${deadlineText}</p>
+                                <button onclick="deleteEvent(${index})" class="text-red-400 hover:text-red-600 text-xs pl-2 font-bold">삭제</button>
+                            </div>
+                            ${memoText}
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            window.deleteEvent = function(index) {
+                if(!confirm("해당 일정을 삭제하시겠습니까?")) return;
+                const savedEvents = JSON.parse(localStorage.getItem('academicEvents') || '[]');
+                savedEvents.splice(index, 1);
+                localStorage.setItem('academicEvents', JSON.stringify(savedEvents));
+                refreshEventLayout();
+            };
+
+            refreshEventLayout();
+
+            // 3. 새 일정 입력 폼 서브밋 제어
+            document.getElementById('event-form').addEventListener('submit', function(e) {
+                e.preventDefault();
+                const category = document.getElementById('e-category').value;
+                const subject = document.getElementById('e-subject').value;
+                const title = document.getElementById('e-title').value;
+                const startDate = document.getElementById('e-start-date').value;
+                const endDate = document.getElementById('e-end-date').value;
+                const memo = document.getElementById('e-memo').value;
+
+                const newEvent = { category, subject, title, startDate, endDate, memo };
+                const currentEvents = JSON.parse(localStorage.getItem('academicEvents') || '[]');
+                currentEvents.push(newEvent);
+                localStorage.setItem('academicEvents', JSON.stringify(currentEvents));
+
+                closeModal('event-modal');
+                this.reset();
+                refreshEventLayout();
+            });
+
+            // 4. 대시보드 성적 요약 동적 갱신
             function updateSummary() {
                 const schoolData = JSON.parse(localStorage.getItem('schoolGrades') || '[]');
                 const mockData = JSON.parse(localStorage.getItem('mockGrades') || '[]');
@@ -174,14 +289,11 @@
                     const lastM = mockData[mockData.length - 1];
                     html += `<p class="text-purple-600">📝 모평 최신: ${lastM.year}년 ${lastM.month}월 ${lastM.name} [${lastM.grade}등급] (표점:${lastM.std})</p>`;
                 }
-                
-                if(html) {
-                    document.getElementById('summary-content').innerHTML = html;
-                }
+                if(html) document.getElementById('summary-content').innerHTML = html;
             }
             updateSummary();
 
-            // 3. 내신 성적 저장 및 등급 자동 산출
+            // 5. 내신 성적 저장 및 등급 자동 산출
             document.getElementById('school-form').addEventListener('submit', function(e) {
                 e.preventDefault();
                 const name = document.getElementById('s-name').value;
@@ -191,8 +303,8 @@
                 const same = parseInt(document.getElementById('s-same').value);
                 const dev = parseFloat(document.getElementById('s-dev').value);
 
-                const midRank = rank + (same - 1) / 2; // 중간석차 계산
-                const percentage = (midRank / total) * 100; // 백분율
+                const midRank = rank + (same - 1) / 2;
+                const percentage = (midRank / total) * 100;
 
                 let calculatedGrade = 9;
                 if (percentage <= 4) calculatedGrade = 1;
@@ -215,7 +327,7 @@
                 updateSummary();
             });
 
-            // 4. 모의고사 성적 저장
+            // 6. 모의고사 성적 저장
             document.getElementById('mock-form').addEventListener('submit', function(e) {
                 e.preventDefault();
                 const year = document.getElementById('m-year').value;
@@ -237,7 +349,7 @@
                 updateSummary();
             });
 
-            // 5. API Key 스토리지 기억 및 로드
+            // 7. API Key 스토리지 로드
             const apiKeyInput = document.getElementById('api-key-input');
             if(localStorage.getItem('gemini_api_key')) {
                 apiKeyInput.value = localStorage.getItem('gemini_api_key');
@@ -246,7 +358,7 @@
                 localStorage.setItem('gemini_api_key', e.target.value.trim());
             });
 
-            // 6. CSV 파일 파싱 및 로컬 로드
+            // 8. CSV 파일 파싱 엔진
             const csvInput = document.getElementById('csv-file-input');
             const csvStatus = document.getElementById('csv-status');
 
@@ -263,7 +375,7 @@
                 reader.readAsText(file, "UTF-8");
             });
 
-            // 7. Gemini API 안전 호출 및 응답 디버깅 엔진
+            // 9. Gemini API 안전 호출 엔진 (데이터 누락 예외 완벽 처리)
             const sendBtn = document.getElementById('send-btn');
             sendBtn.addEventListener('click', async function() {
                 const apiKey = localStorage.getItem('gemini_api_key');
@@ -275,20 +387,23 @@
                 if(!subject || !userInput) { alert('과목과 검색 키워드를 입력해주세요.'); return; }
 
                 responseBox.classList.remove('hidden');
-                responseBox.innerText = `🤖 시스템 빌드 중 및 백엔드 전송 중...`;
+                responseBox.innerText = `🤖 분석 시스템 빌드 및 대시보드 통신 중...`;
 
-                // JSON 파싱 에러를 방지하기 위해 텍스트 이스케이프 정제 처리
-                const safeContext = studentRecordContext
-                    .replace(/\\/g, '\\\\')
-                    .replace(/"/g, '\\"')
-                    .replace(/\n/g, '\\n')
-                    .replace(/\r/g, '\\r');
+                // 데이터 누락 시 안전 가공 (replace 에러 완전 방지)
+                let safeContext = "누적된 데이터 없음. 기본 고교 교육과정 기준 수행.";
+                if (studentRecordContext && studentRecordContext.trim() !== "") {
+                    safeContext = studentRecordContext
+                        .replace(/\\/g, '\\\\')
+                        .replace(/"/g, '\\"')
+                        .replace(/\n/g, '\\n')
+                        .replace(/\r/g, '\\r');
+                }
 
                 const systemPrompt = `당신은 대한민국 고등학교 학생부종합전형 수시 평가 전문 컨설턴트입니다.
 제공된 [학생부 기록 데이터]를 기반으로 기존 탐구 흐름과 심화 연계가 가능한 탐구 보고서 주제 3가지를 제안해 주세요.
 
 [학생부 기록 데이터 (CSV)]
-${safeContext || "누적된 데이터 없음. 기본 고교 교육과정 기준 수행."}
+${safeContext}
 
 [요청 사항]
 - 과목: ${subject}
@@ -297,9 +412,7 @@ ${safeContext || "누적된 데이터 없음. 기본 고교 교육과정 기준 
 양식은 각 주제별로 1.주제명 2.연계 포인트 3.핵심 탐구 내용 4.세특 작성 팁을 나누어 구체적으로 작성해 주세요.`;
 
                 try {
-                    // v1beta 경로와 명확한 모델 구조를 결합한 주소로 변경
                     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
-
                     
                     const response = await fetch(url, {
                         method: 'POST',
@@ -311,24 +424,21 @@ ${safeContext || "누적된 데이터 없음. 기본 고교 교육과정 기준 
 
                     const data = await response.json();
                     
-                    // Google API 측에서 에러 객체를 명시적으로 던진 경우의 예외 처리
                     if (data.error) {
-                        responseBox.innerText = `❌ Google 서버 에러 반환:\n• 코드: ${data.error.code}\n• 사유: ${data.error.message}\n• 상태: ${data.error.status}\n\n💡 API Key가 올바른지, 혹은 결제/할당량 한도 이슈인지 확인해 주세요.`;
+                        responseBox.innerText = `❌ Google 서버 에러 반환:\n• 코드: ${data.error.code}\n• 사유: ${data.error.message}`;
                         return;
                     }
 
-                    // 안전한 응답 트리 검증 및 화면 출력
                     if (data.candidates && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0].text) {
                         let aiText = data.candidates[0].content.parts[0].text;
                         responseBox.innerText = aiText;
                     } else {
-                        // 정상 응답이 아닐 경우 파싱된 원본 구조를 확인하기 위한 디버깅 코드
-                        responseBox.innerText = `❌ 에러: API 응답 트리 파싱 실패.\n반환된 데이터 구조: ${JSON.stringify(data).substring(0, 300)}...`;
+                        responseBox.innerText = `❌ 에러: API 응답 트리 파싱 실패.\n반환 데이터 구조: ${JSON.stringify(data).substring(0, 200)}`;
                     }
 
                 } catch (error) {
                     console.error(error);
-                    responseBox.innerText = `❌ 통신 오류: ${error.message}\n인터넷 연결 상태를 확인해 주세요.`;
+                    responseBox.innerText = `❌ 통신 오류: ${error.message}`;
                 }
             });
         });
