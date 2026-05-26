@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Academic Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
+    <style>
+        .fc { max-height: 400px; font-size: 0.85rem; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans">
+
+    <div class="min-h-screen p-6 max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8">
+    
+        <div class="flex flex-col gap-6">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex-1">
+                <div id="calendar"></div>
+            </div>
+          
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 h-48 overflow-y-auto">
+                <h3 class="text-sm font-bold text-gray-500 mb-3">과목 / 수행평가 내용 / 마감일</h3>
+                <div id="memo-list" class="space-y-2">
+                    <p class="text-sm text-gray-600">📌 [화학Ⅱ] 카페인 세포 독성 보고서 제출</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex flex-col gap-6 justify-between">
+            <div class="flex flex-col gap-3 items-end">
+                <button onclick="openModal('school-modal')" class="w-48 bg-white border border-gray-200 py-2 px-4 rounded-xl shadow-sm hover:bg-gray-50 transition font-medium">내 정보 (내신) 입력</button>
+                <button onclick="openModal('mock-modal')" class="w-48 bg-white border border-gray-200 py-2 px-4 rounded-xl shadow-sm hover:bg-gray-50 transition font-medium">내 정보 (모의고사) 입력</button>
+                <button class="w-48 bg-white border border-gray-200 py-2 px-4 rounded-xl shadow-sm hover:bg-gray-50 transition font-medium">대학 입시</button>
+            </div>
+
+            <div class="bg-white p-4 rounded-xl border border-gray-100 text-xs space-y-1">
+                <p class="font-bold text-gray-500">최근 입력된 성적 요약</p>
+                <div id="summary-content" class="text-gray-600">입력된 성적 정보가 없습니다.</div>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col gap-4 items-center">
+                <div class="w-32 h-16 bg-gray-100 rounded-xl flex items-center justify-center font-bold text-gray-400">로 고</div>
+              
+                <select id="subject-select" class="w-full max-w-md bg-white border border-gray-300 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="">과목 선택</option>
+                    <option value="화학Ⅱ">화학Ⅱ</option>
+                    <option value="생명과학Ⅱ">생명과학Ⅱ</option>
+                </select>
+
+                <div class="w-full max-w-md relative">
+                    <input type="text" id="ai-input" placeholder="흥미나 진로 관련 키워드를 입력하세요..." 
+                           class="w-full bg-gray-50 border border-gray-200 rounded-full pl-5 pr-12 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <button id="send-btn" class="absolute right-2 top-1.5 bg-blue-600 text-white p-2 rounded-full hover:bg-blue-700 transition">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 transform rotate-45 -translate-x-0.5 translate-y-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                        </svg>
+                    </button>
+                </div>
+              
+                <div id="ai-response" class="w-full max-w-md text-sm text-gray-600 bg-gray-50 p-4 rounded-xl hidden"></div>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="school-modal" class="fixed inset-0 bg-black bg-opacity-40 hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
+            <h3 class="text-lg font-bold mb-4">내신 성적 입력</h3>
+            <form id="school-form" class="space-y-3 text-sm">
+                <div><label class="block font-medium mb-1">과목명</label><input type="text" id="s-name" placeholder="예: 화학Ⅱ" class="w-full border p-2 rounded-xl" required></div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div><label class="block font-medium mb-1">원점수</label><input type="number" id="s-score" class="w-full border p-2 rounded-xl" required></div>
+                    <div><label class="block font-medium mb-1">수강자수</label><input type="number" id="s-total" class="w-full border p-2 rounded-xl" required></div>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div><label class="block font-medium mb-1">석차</label><input type="number" id="s-rank" class="w-full border p-2 rounded-xl" required></div>
+                    <div><label class="block font-medium mb-1">동석차수</label><input type="number" id="s-same" value="1" class="w-full border p-2 rounded-xl" required></div>
+                </div>
+                <div><label class="block font-medium mb-1">표준편차</label><input type="number" step="0.1" id="s-dev" class="w-full border p-2 rounded-xl" required></div>
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" onclick="closeModal('school-modal')" class="px-4 py-2 border rounded-xl">취소</button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-xl">저장 및 계산</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="mock-modal" class="fixed inset-0 bg-black bg-opacity-40 hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
+            <h3 class="text-lg font-bold mb-4">모의고사 성적 입력</h3>
+            <form id="mock-form" class="space-y-3 text-sm">
+                <div class="grid grid-cols-2 gap-2">
+                    <div><label class="block font-medium mb-1">시행 연도</label><input type="number" id="m-year" value="2026" class="w-full border p-2 rounded-xl" required></div>
+                    <div><label class="block font-medium mb-1">시행 월</label><input type="number" id="m-month" placeholder="예: 3" class="w-full border p-2 rounded-xl" required></div>
+                </div>
+                <div><label class="block font-medium mb-1">과목명</label><input type="text" id="m-name" placeholder="예: 국어" class="w-full border p-2 rounded-xl" required></div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div><label class="block font-medium mb-1">원점수</label><input type="number" id="m-score" class="w-full border p-2 rounded-xl" required></div>
+                    <div><label class="block font-medium mb-1">표준점수</label><input type="number" id="m-std" class="w-full border p-2 rounded-xl" required></div>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div><label class="block font-medium mb-1">등급</label><input type="number" id="m-grade" class="w-full border p-2 rounded-xl" required></div>
+                    <div><label class="block font-medium mb-1">백분위</label><input type="number" id="m-percent" class="w-full border p-2 rounded-xl" required></div>
+                </div>
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" onclick="closeModal('mock-modal')" class="px-4 py-2 border rounded-xl">취소</button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-xl">저장</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // 모달 제어 함수
+        function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
+        function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // 1. 달력 초기화 (기존 로직 유지)
+            const calendarEl = document.getElementById('calendar');
+            const calendar = new FullCalendar.Calendar(calendarEl, {
+                initialView: 'dayGridMonth',
+                locale: 'ko',
+                headerToolbar: { left: 'title', right: 'today prev,next' },
+                events: [
+                    { title: '⭐ 화학 보고서', start: '2026-06-10' },
+                    { title: '⭐ 생명 수행', start: '2026-06-24' }
+                ],
+                dateClick: function(info) {
+                    alert('클릭한 날짜: ' + info.dateStr);
+                }
+            });
+            calendar.render();
+
+            // 2. 대시보드 성적 요약 업데이트 기능
+            function updateSummary() {
+                const schoolData = JSON.parse(localStorage.getItem('schoolGrades') || '[]');
+                const mockData = JSON.parse(localStorage.getItem('mockGrades') || '[]');
+                
+                let html = '';
+                if(schoolData.length > 0) {
+                    const lastS = schoolData[schoolData.length - 1];
+                    html += `<p class="text-blue-600">🏠 내신 최신: ${lastS.name} [${lastS.calculatedGrade}등급] (원점수:${lastS.score})</p>`;
+                }
+                if(mockData.length > 0) {
+                    const lastM = mockData[mockData.length - 1];
+                    html += `<p class="text-purple-600">📝 모평 최신: ${lastM.year}년 ${lastM.month}월 ${lastM.name} [${lastM.grade}등급] (표점:${lastM.std})</p>`;
+                }
+                
+                if(html) {
+                    document.getElementById('summary-content').innerHTML = html;
+                }
+            }
+            updateSummary(); // 페이지 로드 시 기존 데이터 반영
+
+            // 3. 내신 중간석차 및 석차등급 계산 처리 로직
+            document.getElementById('school-form').addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const name = document.getElementById('s-name').value;
+                const score = parseFloat(document.getElementById('s-score').value);
+                const total = parseInt(document.getElementById('s-total').value);
+                const rank = parseInt(document.getElementById('s-rank').value);
+                const same = parseInt(document.getElementById('s-same').value);
+                const dev = parseFloat(document.getElementById('s-dev').value);
+
+                // 고등학교 중간석차 산출 수식 적용: 석차 + (동석차수 - 1) / 2
+                const midRank = rank + (same - 1) / 2;
+                // 누적 백분율 (%) 계산
+                const percentage = (midRank / total) * 100;
+
+                // 내신 석차등급 기준 매핑 판정
+                let calculatedGrade = 9;
+                if (percentage <= 4) calculatedGrade = 1;
+                else if (percentage <= 11) calculatedGrade = 2;
+                else if (percentage <= 23) calculatedGrade = 3;
+                else if (percentage <= 40) calculatedGrade = 4;
+                else if (percentage <= 60) calculatedGrade = 5;
+                else if (percentage <= 77) calculatedGrade = 6;
+                else if (percentage <= 89) calculatedGrade = 7;
+                else if (percentage <= 96) calculatedGrade = 8;
+
+                const newGrade = { name, score, total, rank, same, dev, midRank, percentage, calculatedGrade };
+                
+                // 기존 데이터 배열에 추가 후 localStorage 저장
+                const currentData = JSON.parse(localStorage.getItem('schoolGrades') || '[]');
+                currentData.push(newGrade);
+                localStorage.setItem('schoolGrades', JSON.stringify(currentData));
+
+                alert(`${name} 과목 입력 완료!\n중간석차: ${midRank}등\n산출된 등급: ${calculatedGrade}등급입니다.`);
+                closeModal('school-modal');
+                this.reset();
+                updateSummary();
+            });
+
+            // 4. 모의고사 성적 저장 로직
+            document.getElementById('mock-form').addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const year = document.getElementById('m-year').value;
+                const month = document.getElementById('m-month').value;
+                const name = document.getElementById('m-name').value;
+                const score = document.getElementById('m-score').value;
+                const std = document.getElementById('m-std').value;
+                const grade = document.getElementById('m-grade').value;
+                const percent = document.getElementById('m-percent').value;
+
+                const newMock = { year, month, name, score, std, grade, percent };
+                
+                const currentData = JSON.parse(localStorage.getItem('mockGrades') || '[]');
+                currentData.push(newMock);
+                localStorage.setItem('mockGrades', JSON.stringify(currentData));
+
+                alert(`${year}년 ${month}월 ${name} 모의고사 성적 저장 완료!`);
+                closeModal('mock-modal');
+                this.reset();
+                updateSummary();
+            });
+
+            // 5. Gemini API 버튼 클릭 이벤트 기본 세팅
+            const sendBtn = document.getElementById('send-btn');
+            sendBtn.addEventListener('click', function() {
+                const subject = document.getElementById('subject-select').value;
+                const inputtext = document.getElementById('ai-input').value;
+                
+                if(!subject || !inputtext) {
+                    alert('과목을 선택하고 키워드를 입력해주세요.');
+                    return;
+                }
+
+                const responseBox = document.getElementById('ai-response');
+                responseBox.classList.remove('hidden');
+                responseBox.innerText = `🤖 [${subject}]에 대해 '${inputtext}' 맞춤형 탐구 주제를 생성 중입니다... (여기에 Gemini API 연동 코드가 들어갈 예정)`;
+            });
+        });
+    </script>
+</body>
+</html>
