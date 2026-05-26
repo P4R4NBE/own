@@ -286,8 +286,9 @@ ${safeContext || "누적된 데이터 없음. 기본 고교 교육과정 기준 
 양식은 각 주제별로 1.주제명 2.연계 포인트 3.핵심 탐구 내용 4.세특 작성 팁을 나누어 구체적으로 작성해 주세요.`;
 
                 try {
-                    // 안정화 버전인 정식 v1 EndPoint 사용
-                    const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+                    // v1beta 경로와 명확한 모델 구조를 결합한 주소로 변경
+                    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+
                     
                     const response = await fetch(url, {
                         method: 'POST',
